@@ -1,0 +1,52 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  labels:
+    app: mq-trigger-template
+  name: mq-trigger-template
+  namespace: mq01-ci
+spec:
+  params:
+  - description: The git revision
+    name: gitrevision
+  - description: The git repository url
+    name: gitrepositoryurl
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+      generateName: mq-dev-pipeline-run-
+    spec:
+      workspaces:
+      - name: shared-data
+        volumeClaimTemplate:
+          spec:
+            accessModes:
+            - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+      - name: git-creds
+        secret:
+          secretName: mq01-git-credentials
+      params:
+      - name: source-repo-url
+        value: $(tt.params.gitrepositoryurl)
+      - name: revision
+        value: $(tt.params.gitrevision)
+      - name: dockerfile
+        value: $(workspaces.source.path)/repo/main/bin/Dockerfile
+      - name: ops-repo-url
+        value: https://github.com/$GITORG/mq01-ops.git
+      - name: image-reference
+        value: image-registry.openshift-image-registry.svc:5000/mq01-ci/mq01
+      - name: storage-driver
+        value: vfs
+      - name: tls-verify
+        value: "false"
+      - name: git-user-name
+        value: "odowdaibm"
+      - name: git-user-email
+        value: "a_o-dowd@uk.ibm.com"
+      pipelineRef:
+        name: mq-dev-pipeline
